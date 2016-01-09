@@ -35,7 +35,7 @@ from hash_ring._compat import bytes
 
 import math
 import sys
-from bisect import bisect
+from bisect import bisect, insort
 
 if sys.version_info >= (2, 5):
     import hashlib
@@ -59,33 +59,43 @@ class HashRing(object):
         if not weights:
             weights = {}
         self.weights = weights
+        self._initialize_ring()
 
-        self._generate_circle()
-
-    def _generate_circle(self):
-        """Generates the circle.
+    def _insert_node(self, node):
+        """Insert a node into the ring, adding its keys to the ring map as well
+        as the _sorted_keys list.
         """
-        total_weight = 0
+        weight = self.weights.get(node, 1)
+        total_weight = sum([self.weights.get(n, 1) for n in self.nodes])
+        factor = math.floor((40*len(self.nodes)*weight) / total_weight);
+
+        for j in range(0, int(factor)):
+            b_key = self._hash_digest( '%s-%s' % (node, j) )
+            for i in range(0, 3):
+                key = self._hash_val(b_key, lambda x: x+i*4)
+                self.ring[key] = node
+                insort(self._sorted_keys, key)
+
+    def _initialize_ring(self):
+        """Generates the full ring of nodes. Called once upon initialization.
+        """
         for node in self.nodes:
-            total_weight += self.weights.get(node, 1)
+            self._insert_node(node)
 
-        for node in self.nodes:
-            weight = 1
+    def remove_node(self, node_name):
+        """Remove a node from the ring.
+        """
+        to_remove = [key for key in self.ring.keys() if self.ring[key] == node_name]
+        for key in to_remove:
+            self.ring.pop(key)
+            self._sorted_keys.remove(key)
 
-            if node in self.weights:
-                weight = self.weights.get(node)
-
-            factor = math.floor((40*len(self.nodes)*weight) / total_weight);
-
-            for j in range(0, int(factor)):
-                b_key = self._hash_digest( '%s-%s' % (node, j) )
-
-                for i in range(0, 3):
-                    key = self._hash_val(b_key, lambda x: x+i*4)
-                    self.ring[key] = node
-                    self._sorted_keys.append(key)
-
-        self._sorted_keys.sort()
+    def add_node(self, node_name, weight=1):
+        """Add a node to the ring.
+        """
+        self.nodes.append(node_name)
+        self.weights[node_name] = 1
+        self._insert_node(node_name)
 
     def get_node(self, string_key):
         """Given a string key a corresponding node in the hash ring is returned.
