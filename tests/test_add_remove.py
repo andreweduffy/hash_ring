@@ -1,17 +1,32 @@
 import hash_ring
 
 def setup():
-    nodes = ['hawkeye', 'scarlet widow', 'iron man', 'pepper', 'rhody']
+    """
+    Create a simple HashRing for testing.
+    """
+    nodes = ['hawkeye', 'scarlet widow', 'iron man', 'pepper', 'rhody'] # Assemble!
     ring = hash_ring.HashRing(nodes=nodes)
     return ring, nodes
+
+def try_many(n, ring, nodes):
+    """
+    Return the number of
+    """
+    seen = set()
+    possible = set(nodes)
+    for i in range(1000):
+        seen.add(ring.get_node(str(i)))
+    diff = possible - seen
+    return diff
 
 def test_add():
     """
     Test adding nodes
     """
-    ring,_ = setup()
+    ring,nodes = setup()
     ring.add_node('jackson pollock')
-    ring.add_node('iron man')
+    diff = try_many(1000, ring, nodes)
+    assert len(diff) == 0, "Not all keys represented after addition"
 
 def test_seen():
     """
@@ -19,12 +34,8 @@ def test_seen():
     been represented.
     """
     ring,nodes = setup()
-    seen = set()
-    possible = set(nodes)
-    for i in range(1000):
-        seen.add(ring.get_node(str(i)))
-    diff = possible - seen
-    assert len(diff) == 0, "Keys differ %s" % diff
+    diff = try_many(1000, ring, nodes)
+    assert len(diff) == 0, "Keys differ, but shouldn't: %s" % diff
 
 """
 Test removing nodes
@@ -32,11 +43,5 @@ Test removing nodes
 def test_remove():
     ring,nodes = setup()
     ring.remove_node('iron man')
-
-    seen = set()
-    possible = set(nodes)
-    for i in range(50):
-        seen.add(ring.get_node(str(i)))
-    diff = possible - seen
+    diff = try_many(1000, ring, nodes)
     assert len(diff) == 1, "Were %d key(s) missing, should be only 1" % len(diff)
-
