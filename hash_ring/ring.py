@@ -94,7 +94,7 @@ class HashRing(object):
         """Add a node to the ring.
         """
         self.nodes.append(node_name)
-        self.weights[node_name] = 1
+        self.weights[node_name] = weight
         self._insert_node(node_name)
 
     def get_node(self, string_key):
